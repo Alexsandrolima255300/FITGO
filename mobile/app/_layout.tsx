@@ -34,12 +34,12 @@ export default function RootLayout() {
           tabBarLabelStyle: { fontSize: 10, fontWeight: '700' }
         }}
       >
-        <Tabs.Screen name="index" options={{ title: 'Hoje', tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} /> }} />
-        <Tabs.Screen name="workouts" options={{ title: 'Treinos', tabBarIcon: ({ color, size }) => <Ionicons name="barbell" color={color} size={size} /> }} />
-        <Tabs.Screen name="activity" options={{ title: 'GPS', tabBarIcon: ({ color, size }) => <Ionicons name="navigate" color={color} size={size} /> }} />
-        <Tabs.Screen name="hydration" options={{ title: 'Água', tabBarIcon: ({ color, size }) => <Ionicons name="water" color={color} size={size} /> }} />
-        <Tabs.Screen name="nutrition" options={{ title: 'Comida', tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" color={color} size={size} /> }} />
-        <Tabs.Screen name="progress" options={{ title: 'Evolução', tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart" color={color} size={size} /> }} />
+        <Tabs.Screen name="index" options={{ title: 'Hoje', tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color ?? theme.text} size={size} /> }} />
+        <Tabs.Screen name="workouts" options={{ title: 'Treinos', tabBarIcon: ({ color, size }) => <Ionicons name="barbell" color={color ?? theme.text} size={size} /> }} />
+        <Tabs.Screen name="activity" options={{ title: 'GPS', tabBarIcon: ({ color, size }) => <Ionicons name="navigate" color={color ?? theme.text} size={size} /> }} />
+        <Tabs.Screen name="hydration" options={{ title: 'Água', tabBarIcon: ({ color, size }) => <Ionicons name="water" color={color ?? theme.text} size={size} /> }} />
+        <Tabs.Screen name="nutrition" options={{ title: 'Comida', tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" color={color ?? theme.text} size={size} /> }} />
+        <Tabs.Screen name="progress" options={{ title: 'Evolução', tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart" color={color ?? theme.text} size={size} /> }} />
       </Tabs>
     </>
   );
