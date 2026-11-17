@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
@@ -10,10 +10,25 @@ import { theme } from '../src/theme';
 export default function ProgressScreen() {
   const [activities, setActivities] = useState<FitgoActivity[]>([]);
   const [selected, setSelected] = useState<FitgoActivity | null>(null);
+  const [weight, setWeight] = useState('');
+  const [weights, setWeights] = useState<{ id: string; date: string; kg: number }[]>([]);
   const shareRef = useRef<ViewShot>(null);
   useFocusEffect(useCallback(() => {
     getActivities().then((items) => { setActivities(items); setSelected(items[0] ?? null); });
+    AsyncStorage.getItem('fitgo:body-weight:v1').then((value) => setWeights(value ? JSON.parse(value) : []));
   }, []));
+  const saveWeight = async () => {
+    const value = Number(weight.replace(',', '.'));
+    if (!Number.isFinite(value) || value < 20 || value > 400) {
+      Alert.alert('Peso inválido', 'Digite um peso válido em quilogramas.');
+      return;
+    }
+    const entry = { id: String(Date.now()), date: new Date().toISOString(), kg: value };
+    const next = [entry, ...weights].slice(0, 100);
+    setWeights(next);
+    setWeight('');
+    await AsyncStorage.setItem('fitgo:body-weight:v1', JSON.stringify(next));
+  };
   const totalDistance = activities.reduce((sum, item) => sum + item.distanceMeters, 0);
   const totalTime = activities.reduce((sum, item) => sum + item.durationSeconds, 0);
   const share = async () => {
@@ -33,6 +48,11 @@ export default function ProgressScreen() {
       <Text style={styles.kicker}>CADA PASSO CONTA</Text>
       <Text style={styles.title}>Sua evolução.</Text>
       <Text style={styles.subtitle}>Veja o caminho que você já percorreu. Seus registros ficam salvos neste aparelho nesta versão inicial.</Text>
+      <View style={styles.weightCard}>
+        <View style={styles.weightTop}><View><Text style={styles.weightLabel}>PESO CORPORAL</Text><Text style={styles.weightValue}>{weights[0] ? weights[0].kg.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' kg' : '--'}</Text><Text style={styles.weightDate}>{weights[0] ? 'Último registro · ' + new Date(weights[0].date).toLocaleDateString('pt-BR') : 'Registre seu primeiro peso'}</Text></View><View style={styles.weightIcon}><Ionicons name="scale-outline" size={22} color={theme.lime} /></View></View>
+        <View style={styles.weightForm}><TextInput value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder="Peso em kg" placeholderTextColor={theme.muted} style={styles.weightInput} /><Pressable style={styles.weightButton} onPress={saveWeight}><Text style={styles.weightButtonText}>SALVAR</Text></Pressable></View>
+        {weights.length > 1 && <Text style={styles.weightHistory}>Variação desde o primeiro registro: {(weights[0].kg - weights[weights.length - 1].kg) > 0 ? '+' : ''}{(weights[0].kg - weights[weights.length - 1].kg).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg</Text>}
+      </View>
       <View style={styles.summary}>
         <View style={styles.summaryItem}><Text style={styles.summaryValue}>{(totalDistance / 1000).toFixed(1)}</Text><Text style={styles.summaryLabel}>KM PERCORRIDOS</Text></View>
         <View style={styles.summaryItem}><Text style={styles.summaryValue}>{activities.length}</Text><Text style={styles.summaryLabel}>ATIVIDADES</Text></View>
@@ -76,6 +96,17 @@ const styles = StyleSheet.create({
   kicker: { color: theme.lime, fontSize: 9, letterSpacing: 1.8, fontWeight: '900', marginTop: 7 },
   title: { color: theme.text, fontSize: 30, fontWeight: '900', letterSpacing: -1.2, marginTop: -7 },
   subtitle: { color: theme.muted, fontSize: 11, lineHeight: 18, marginTop: -8 },
+  weightCard: { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 19, padding: 17, gap: 13, marginTop: 4 },
+  weightTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  weightLabel: { color: theme.lime, fontSize: 8, letterSpacing: 1.2, fontWeight: '900' },
+  weightValue: { color: theme.text, fontSize: 27, fontWeight: '900', marginTop: 5 },
+  weightDate: { color: theme.muted, fontSize: 8, marginTop: 3 },
+  weightIcon: { width: 43, height: 43, borderRadius: 13, backgroundColor: '#202A1A', alignItems: 'center', justifyContent: 'center' },
+  weightForm: { flexDirection: 'row', gap: 8 },
+  weightInput: { flex: 1, backgroundColor: theme.surface2, borderWidth: 1, borderColor: theme.border, borderRadius: 11, paddingHorizontal: 12, color: theme.text, fontSize: 11 },
+  weightButton: { backgroundColor: theme.lime, borderRadius: 11, paddingHorizontal: 17, justifyContent: 'center' },
+  weightButtonText: { color: theme.bg, fontSize: 9, fontWeight: '900' },
+  weightHistory: { color: theme.muted, fontSize: 9 },
   summary: { flexDirection: 'row', gap: 8, marginTop: 4 },
   summaryItem: { flex: 1, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 15, padding: 13 },
   summaryValue: { color: theme.text, fontSize: 23, fontWeight: '900' },

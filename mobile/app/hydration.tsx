@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
@@ -26,6 +26,11 @@ export default function HydrationScreen() {
     });
   }, []));
   const progress = Math.min(amount / goal, 1);
+  const updateGoal = async (delta: number) => {
+    const next = Math.max(500, Math.min(6000, goal + delta));
+    setGoal(next);
+    await AsyncStorage.setItem(GOAL_KEY, String(next));
+  };
   const addWater = async (ml: number) => {
     const next = amount + ml;
     setAmount(next);
@@ -65,6 +70,13 @@ export default function HydrationScreen() {
           <Pressable style={styles.addButton} onPress={() => addWater(500)}><Text style={styles.addValue}>+500 ml</Text><Text style={styles.addLabel}>GARRAFA</Text></Pressable>
         </View>
         <Pressable style={styles.undo} onPress={() => addWater(-Math.min(250, amount))}><Text style={styles.undoText}>DESFAZER 250 ML</Text></Pressable>
+        <View style={styles.goalControls}>
+          <Text style={styles.goalControlLabel}>AJUSTAR META</Text>
+          <View style={styles.goalButtons}>
+            <Pressable style={styles.goalButton} onPress={() => updateGoal(-250)}><Text style={styles.goalButtonText}>− 250 ml</Text></Pressable>
+            <Pressable style={styles.goalButton} onPress={() => updateGoal(250)}><Text style={styles.goalButtonText}>+ 250 ml</Text></Pressable>
+          </View>
+        </View>
       </View>
       <View style={styles.setting}>
         <View style={styles.settingIcon}><Ionicons name="notifications-outline" color={theme.lime} size={21} /></View>
@@ -96,6 +108,11 @@ const styles = StyleSheet.create({
   addLabel: { color: theme.muted, fontSize: 7, letterSpacing: .5, marginTop: 5 },
   undo: { padding: 10, marginTop: 8 },
   undoText: { color: theme.muted, fontSize: 8, letterSpacing: 1, fontWeight: '800' },
+  goalControls: { width: '100%', borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 14, marginTop: 3 },
+  goalControlLabel: { color: theme.muted, fontSize: 8, letterSpacing: 1, fontWeight: '900', textAlign: 'center' },
+  goalButtons: { flexDirection: 'row', justifyContent: 'center', gap: 9, marginTop: 10 },
+  goalButton: { borderRadius: 10, backgroundColor: theme.surface2, paddingVertical: 9, paddingHorizontal: 15 },
+  goalButtonText: { color: theme.text, fontSize: 9, fontWeight: '800' },
   setting: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 17, padding: 15 },
   settingIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#202A1A', alignItems: 'center', justifyContent: 'center' },
   settingTitle: { color: theme.text, fontSize: 11, fontWeight: '800' },

@@ -38,6 +38,7 @@ export default function RootLayout() {
         <Tabs.Screen name="workouts" options={{ title: 'Treinos', tabBarIcon: ({ color, size }) => <Ionicons name="barbell" color={color} size={size} /> }} />
         <Tabs.Screen name="activity" options={{ title: 'GPS', tabBarIcon: ({ color, size }) => <Ionicons name="navigate" color={color} size={size} /> }} />
         <Tabs.Screen name="hydration" options={{ title: 'Água', tabBarIcon: ({ color, size }) => <Ionicons name="water" color={color} size={size} /> }} />
+        <Tabs.Screen name="nutrition" options={{ title: 'Comida', tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" color={color} size={size} /> }} />
         <Tabs.Screen name="progress" options={{ title: 'Evolução', tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart" color={color} size={size} /> }} />
       </Tabs>
     </>

@@ -43,6 +43,7 @@ export default function HomeScreen() {
       <View style={styles.shortcuts}>
         <Pressable style={styles.shortcut} onPress={() => router.push('/workouts')}><View style={styles.shortcutIcon}><Ionicons name="barbell-outline" color={theme.lime} size={21} /></View><View style={{ flex: 1 }}><Text style={styles.shortcutTitle}>Plano de treino</Text><Text style={styles.shortcutSub}>Veja o treino de hoje</Text></View><Ionicons name="chevron-forward" color={theme.muted} size={18} /></Pressable>
         <Pressable style={styles.shortcut} onPress={() => router.push('/hydration')}><View style={styles.shortcutIcon}><Ionicons name="water-outline" color={theme.lime} size={21} /></View><View style={{ flex: 1 }}><Text style={styles.shortcutTitle}>Hidratação</Text><Text style={styles.shortcutSub}>Cuide da sua meta de água</Text></View><Ionicons name="chevron-forward" color={theme.muted} size={18} /></Pressable>
+        <Pressable style={styles.shortcut} onPress={() => router.push('/nutrition')}><View style={styles.shortcutIcon}><Ionicons name="restaurant-outline" color={theme.lime} size={21} /></View><View style={{ flex: 1 }}><Text style={styles.shortcutTitle}>Alimentação</Text><Text style={styles.shortcutSub}>Registre suas refeições</Text></View><Ionicons name="chevron-forward" color={theme.muted} size={18} /></Pressable>
       </View>
 
       <View style={styles.sectionHead}><Text style={styles.sectionTitle}>ÚLTIMA ATIVIDADE</Text><Pressable onPress={() => router.push('/progress')}><Text style={styles.seeAll}>VER TUDO</Text></Pressable></View>
