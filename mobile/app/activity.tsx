@@ -10,10 +10,10 @@ import { ActiveRoute, calculateDistance, FitgoActivity, formatDuration, formatPa
 import { FITGO_LOCATION_TASK } from '../src/location-task';
 import { theme } from '../src/theme';
 
-const sportOptions: { type: SportType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { type: 'run', label: 'Corrida', icon: 'walk' },
-  { type: 'walk', label: 'Caminhada', icon: 'footsteps' },
-  { type: 'bike', label: 'Bicicleta', icon: 'bicycle' }
+const sportOptions: { type: SportType; label: string; subtitle: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { type: 'run', label: 'Corrida', subtitle: 'Correr', icon: 'walk' },
+  { type: 'walk', label: 'Caminhada', subtitle: 'Caminhar', icon: 'footsteps' },
+  { type: 'bike', label: 'Ciclismo', subtitle: 'Pedalar', icon: 'bicycle' }
 ];
 
 export default function ActivityScreen() {
@@ -34,6 +34,8 @@ export default function ActivityScreen() {
   const distance = calculateDistance(points);
   const pace = distance > 0 ? seconds / (distance / 1000) : 0;
   const speed = seconds > 0 ? (distance / 1000) / (seconds / 3600) : 0;
+  const gpsIsOn = gps.startsWith('GPS ativo');
+  const selectedSport = sportOptions.find((option) => option.type === sport) ?? sportOptions[0];
 
   useEffect(() => {
     if (!active) return;
@@ -78,7 +80,6 @@ export default function ActivityScreen() {
         routeRef.current = next;
         setPoints(next.points);
         await setActiveRoute(next);
-        // O mapa recebe a rota pelo efeito associado ao estado de pontos.
       }
     );
   };
@@ -236,68 +237,253 @@ export default function ActivityScreen() {
   };
 
   return (
-    <ScrollView style={styles.page} contentContainerStyle={styles.content}>
-      <View style={styles.header}><View><Text style={styles.kicker}>REGISTRE SEU MOVIMENTO</Text><Text style={styles.title}>Atividade GPS</Text></View><View style={styles.livePill}><View style={[styles.dot, active && styles.dotLive]} /><Text style={styles.liveText}>{active ? 'AO VIVO' : 'PRONTO'}</Text></View></View>
-      <View style={styles.sports}>{sportOptions.map((option) => <Pressable key={option.type} disabled={active} onPress={() => setSport(option.type)} style={[styles.sport, sport === option.type && styles.sportSelected]}><Ionicons name={option.icon} size={18} color={sport === option.type ? theme.bg : theme.muted} /><Text style={[styles.sportText, sport === option.type && styles.sportTextSelected]}>{option.label}</Text></Pressable>)}</View>
-      <View style={styles.mapWrap}>
-        <WebView
-          ref={map}
-          style={styles.map}
-          source={{ html: MAP_HTML }}
-          originWhitelist={['*']}
-          javaScriptEnabled
-          domStorageEnabled
-          onMessage={(event) => {
-            if (event.nativeEvent.data === 'ready') setMapReady(true);
-          }}
-        />
-        <View style={styles.mapTag}><Ionicons name="navigate" color={theme.lime} size={12} /><Text style={styles.mapTagText}>MAPA DO PERCURSO</Text></View>
-        <Pressable style={styles.recenter} onPress={recenter}><Ionicons name="locate" color={theme.text} size={19} /></Pressable>
-        <Text style={styles.attribution}>© OpenStreetMap contributors</Text>
+    <ScrollView style={styles.page} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <View style={styles.brand}>
+          <View style={styles.brandIcon}><Ionicons name="navigate" size={19} color={theme.bg} /></View>
+          <View>
+            <Text style={styles.kicker}>FITGO / MOVIMENTO</Text>
+            <Text style={styles.title}>GPS Tracker</Text>
+          </View>
+        </View>
+        <View style={styles.readyPill}>
+          <View style={[styles.statusDot, gpsIsOn && styles.statusDotLive, paused && styles.statusDotPaused]} />
+          <Text style={styles.readyText}>{active ? 'AO VIVO' : paused ? 'PAUSADO' : 'PRONTO'}</Text>
+        </View>
       </View>
-      <View style={styles.mainMetric}><Text style={styles.metricLabel}>DISTÂNCIA PERCORRIDA</Text><Text style={styles.distance}>{(distance / 1000).toFixed(2)}<Text style={styles.distanceUnit}> km</Text></Text><View style={styles.metrics}><View style={styles.metric}><Text style={styles.metricValue}>{formatDuration(seconds)}</Text><Text style={styles.metricCaption}>TEMPO</Text></View><View style={styles.metric}><Text style={styles.metricValue}>{formatPace(pace)}</Text><Text style={styles.metricCaption}>RITMO / KM</Text></View><View style={styles.metric}><Text style={styles.metricValue}>{speed.toFixed(1)}</Text><Text style={styles.metricCaption}>KM/H</Text></View></View></View>
-      <Text style={styles.status}>{gps}</Text>
-      {!active && !paused ? <Pressable style={styles.startButton} onPress={start}><Ionicons name="play" color={theme.bg} size={17} /><Text style={styles.startText}>INICIAR {sport === 'run' ? 'CORRIDA' : sport === 'walk' ? 'CAMINHADA' : 'PEDAL'}</Text></Pressable> : active ? <View style={styles.actionRow}><Pressable style={styles.pauseButton} onPress={pause}><Ionicons name="pause" color={theme.text} size={17} /><Text style={styles.stopText}>PAUSAR</Text></Pressable><Pressable style={styles.stopButton} onPress={finish}><Ionicons name="stop" color={theme.text} size={17} /><Text style={styles.stopText}>FINALIZAR</Text></Pressable></View> : <View style={styles.actionRow}><Pressable style={styles.startButton} onPress={resume}><Ionicons name="play" color={theme.bg} size={17} /><Text style={styles.startText}>CONTINUAR</Text></Pressable><Pressable style={styles.stopButton} onPress={finish}><Ionicons name="stop" color={theme.text} size={17} /><Text style={styles.stopText}>FINALIZAR</Text></Pressable></View>}
-      <Text style={styles.footnote}>Mantenha o GPS ativado. O registro em segundo plano depende das permissões do Android e das configurações de bateria do aparelho. O mapa usa dados do OpenStreetMap.</Text>
+
+      <Text style={styles.intro}>Cada passo conta. Escolha como você quer se movimentar hoje.</Text>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>TIPO DE ATIVIDADE</Text>
+        <Text style={styles.sectionHint}>ESCOLHA UMA OPÇÃO</Text>
+      </View>
+      <View style={styles.sports}>
+        {sportOptions.map((option) => {
+          const selected = sport === option.type;
+          return (
+            <Pressable key={option.type} disabled={active || paused} onPress={() => setSport(option.type)} style={[styles.sport, selected && styles.sportSelected, (active || paused) && !selected && styles.sportDisabled]}>
+              <View style={[styles.sportIcon, selected && styles.sportIconSelected]}>
+                <Ionicons name={option.icon} size={20} color={selected ? theme.bg : theme.muted} />
+              </View>
+              <Text style={[styles.sportText, selected && styles.sportTextSelected]}>{option.label}</Text>
+              <Text style={[styles.sportSubtitle, selected && styles.sportSubtitleSelected]}>{option.subtitle}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.mapSection}>
+        <View style={styles.mapTopBar}>
+          <View style={styles.mapTitleGroup}>
+            <Ionicons name="map-outline" size={15} color={theme.lime} />
+            <Text style={styles.mapTitle}>SEU PERCURSO</Text>
+          </View>
+          <View style={styles.mapLive}>
+            <View style={[styles.miniDot, gpsIsOn && styles.statusDotLive]} />
+            <Text style={styles.mapLiveText}>{gpsIsOn ? 'RASTREANDO' : 'MAPA'}</Text>
+          </View>
+        </View>
+        <View style={styles.mapWrap}>
+          <WebView
+            ref={map}
+            style={styles.map}
+            source={{ html: MAP_HTML }}
+            originWhitelist={['*']}
+            javaScriptEnabled
+            domStorageEnabled
+            onMessage={(event) => {
+              if (event.nativeEvent.data === 'ready') setMapReady(true);
+            }}
+          />
+          <View style={styles.mapGpsBadge}>
+            <Ionicons name="radio-outline" color={gpsIsOn ? theme.lime : theme.muted} size={13} />
+            <Text style={styles.mapGpsText}>{gps}</Text>
+          </View>
+          <Pressable style={styles.recenter} onPress={recenter}>
+            <Ionicons name="locate" color={theme.text} size={19} />
+          </Pressable>
+          {!points.length && (
+            <View pointerEvents="none" style={styles.mapEmptyHint}>
+              <View style={styles.mapEmptyIcon}><Ionicons name="navigate" color={theme.lime} size={17} /></View>
+              <Text style={styles.mapEmptyTitle}>Seu caminho começa aqui</Text>
+              <Text style={styles.mapEmptyText}>Inicie uma atividade para desenhar sua rota no mapa.</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>SEU DESEMPENHO</Text>
+        <Text style={styles.sectionHint}>{active ? 'ATUALIZANDO AO VIVO' : 'RESUMO DA ATIVIDADE'}</Text>
+      </View>
+      <View style={styles.distanceCard}>
+        <View style={styles.distanceCardTop}>
+          <View style={styles.distanceLabelRow}>
+            <View style={styles.metricIcon}><Ionicons name="navigate" color={theme.lime} size={15} /></View>
+            <Text style={styles.metricLabel}>DISTÂNCIA PERCORRIDA</Text>
+          </View>
+          <View style={styles.activityTypeTag}><Text style={styles.activityTypeText}>{selectedSport.label.toUpperCase()}</Text></View>
+        </View>
+        <View style={styles.distanceLine}>
+          <Text style={styles.distance}>{(distance / 1000).toFixed(2)}</Text>
+          <Text style={styles.distanceUnit}>KM</Text>
+        </View>
+        <View style={styles.distanceDivider} />
+        <View style={styles.distanceFoot}>
+          <Ionicons name="trending-up" color={theme.lime} size={14} />
+          <Text style={styles.distanceFootText}>{points.length ? points.length + ' pontos registrados no percurso' : 'Sua distância aparecerá aqui quando começar'}</Text>
+        </View>
+      </View>
+
+      <View style={styles.metrics}>
+        <View style={styles.metricCard}>
+          <View style={styles.metricCardIcon}><Ionicons name="time-outline" color={theme.lime} size={16} /></View>
+          <Text style={styles.metricValue}>{formatDuration(seconds)}</Text>
+          <Text style={styles.metricCaption}>TEMPO</Text>
+        </View>
+        <View style={styles.metricCard}>
+          <View style={styles.metricCardIcon}><Ionicons name="speedometer-outline" color={theme.lime} size={16} /></View>
+          <Text style={styles.metricValue}>{formatPace(pace)}</Text>
+          <Text style={styles.metricCaption}>RITMO / KM</Text>
+        </View>
+        <View style={styles.metricCard}>
+          <View style={styles.metricCardIcon}><Ionicons name="flash-outline" color={theme.lime} size={16} /></View>
+          <Text style={styles.metricValue}>{speed.toFixed(1)}</Text>
+          <Text style={styles.metricCaption}>KM/H</Text>
+        </View>
+      </View>
+
+      <View style={styles.controlCard}>
+        {!active && !paused ? (
+          <>
+            <View style={styles.controlIntro}>
+              <Text style={styles.controlTitle}>Pronto para sair?</Text>
+              <Text style={styles.controlSubtitle}>O FITGO registra seu caminho enquanto você se movimenta.</Text>
+            </View>
+            <Pressable style={styles.startButton} onPress={start}>
+              <View style={styles.startIcon}><Ionicons name="play" color={theme.bg} size={17} /></View>
+              <Text style={styles.startText}>INICIAR {sport === 'run' ? 'CORRIDA' : sport === 'walk' ? 'CAMINHADA' : 'PEDAL'}</Text>
+              <Ionicons name="arrow-forward" color={theme.bg} size={17} />
+            </Pressable>
+          </>
+        ) : active ? (
+          <>
+            <View style={styles.controlIntro}>
+              <Text style={styles.controlTitle}>Você está em movimento!</Text>
+              <Text style={styles.controlSubtitle}>Seu percurso está sendo registrado pelo GPS.</Text>
+            </View>
+            <View style={styles.actionRow}>
+              <Pressable style={styles.pauseButton} onPress={pause}>
+                <Ionicons name="pause" color={theme.text} size={17} />
+                <Text style={styles.secondaryButtonText}>PAUSAR</Text>
+              </Pressable>
+              <Pressable style={styles.stopButton} onPress={finish}>
+                <Ionicons name="stop" color={theme.text} size={17} />
+                <Text style={styles.secondaryButtonText}>FINALIZAR</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.controlIntro}>
+              <Text style={styles.controlTitle}>Recupere o fôlego.</Text>
+              <Text style={styles.controlSubtitle}>Sua atividade está pausada. Continue quando estiver pronto.</Text>
+            </View>
+            <View style={styles.actionRow}>
+              <Pressable style={styles.startButton} onPress={resume}>
+                <Ionicons name="play" color={theme.bg} size={17} />
+                <Text style={styles.startText}>CONTINUAR</Text>
+              </Pressable>
+              <Pressable style={styles.stopButton} onPress={finish}>
+                <Ionicons name="stop" color={theme.text} size={17} />
+                <Text style={styles.secondaryButtonText}>FINALIZAR</Text>
+              </Pressable>
+            </View>
+          </>
+        )}
+      </View>
+
+      <View style={styles.footnoteRow}>
+        <Ionicons name="information-circle-outline" color={theme.muted} size={14} />
+        <Text style={styles.footnote}>O registro em segundo plano depende das permissões de localização do Android e das configurações de bateria do aparelho. O mapa utiliza dados do OpenStreetMap e CARTO.</Text>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: theme.bg },
-  content: { padding: 18, paddingBottom: 35, gap: 13 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  kicker: { color: theme.lime, fontSize: 8, letterSpacing: 1.6, fontWeight: '900' },
-  title: { color: theme.text, fontSize: 27, fontWeight: '900', letterSpacing: -1, marginTop: 4 },
-  livePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.surface2, borderRadius: 99, paddingVertical: 8, paddingHorizontal: 10 },
-  dot: { width: 6, height: 6, borderRadius: 4, backgroundColor: theme.muted },
-  dotLive: { backgroundColor: theme.lime },
-  liveText: { color: theme.text, fontSize: 8, fontWeight: '900', letterSpacing: .8 },
-  sports: { flexDirection: 'row', gap: 8 },
-  sport: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 12, borderRadius: 13, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border },
-  sportSelected: { backgroundColor: theme.lime, borderColor: theme.lime },
-  sportText: { color: theme.muted, fontSize: 9, fontWeight: '800' },
-  sportTextSelected: { color: theme.bg },
-  mapWrap: { height: 330, borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: theme.border, backgroundColor: '#17201D' },
-  map: { flex: 1 },
-  mapTag: { position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(8,10,11,0.88)', borderRadius: 9, paddingVertical: 8, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  mapTagText: { color: theme.text, fontSize: 8, fontWeight: '900', letterSpacing: .8 },
-  recenter: { position: 'absolute', right: 12, bottom: 24, width: 39, height: 39, borderRadius: 13, backgroundColor: 'rgba(8,10,11,0.9)', alignItems: 'center', justifyContent: 'center' },
-  attribution: { position: 'absolute', bottom: 5, left: 8, color: '#333', backgroundColor: 'rgba(255,255,255,.7)', fontSize: 7, paddingHorizontal: 4 },
-  mainMetric: { backgroundColor: theme.surface, borderRadius: 20, borderWidth: 1, borderColor: theme.border, padding: 18, alignItems: 'center' },
-  metricLabel: { color: theme.muted, fontSize: 8, letterSpacing: 1.4, fontWeight: '900' },
-  distance: { color: theme.text, fontSize: 53, fontWeight: '900', letterSpacing: -2.5, marginTop: 3 },
-  distanceUnit: { color: theme.lime, fontSize: 18 },
-  metrics: { flexDirection: 'row', width: '100%', marginTop: 14, paddingTop: 15, borderTopWidth: 1, borderTopColor: theme.border },
-  metric: { flex: 1, alignItems: 'center' },
-  metricValue: { color: theme.text, fontSize: 16, fontWeight: '900' },
-  metricCaption: { color: theme.muted, fontSize: 7, letterSpacing: .8, marginTop: 5, fontWeight: '800' },
-  status: { color: theme.muted, fontSize: 9, textAlign: 'center' },
-  startButton: { backgroundColor: theme.lime, borderRadius: 16, padding: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
-  startText: { color: theme.bg, fontSize: 11, fontWeight: '900', letterSpacing: .7 },
+  content: { paddingHorizontal: 18, paddingTop: 17, paddingBottom: 38, gap: 15 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  brandIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: theme.lime, alignItems: 'center', justifyContent: 'center' },
+  kicker: { color: theme.muted, fontSize: 8, letterSpacing: 1.7, fontWeight: '900' },
+  title: { color: theme.text, fontSize: 23, fontWeight: '900', letterSpacing: -0.8, marginTop: 2 },
+  readyPill: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: theme.surface2, borderWidth: 1, borderColor: theme.border, borderRadius: 99, paddingVertical: 8, paddingHorizontal: 11 },
+  statusDot: { width: 7, height: 7, borderRadius: 5, backgroundColor: theme.muted },
+  statusDotLive: { backgroundColor: theme.lime },
+  statusDotPaused: { backgroundColor: '#FFB84D' },
+  readyText: { color: theme.text, fontSize: 8, fontWeight: '900', letterSpacing: 1 },
+  intro: { color: theme.muted, fontSize: 12, lineHeight: 18, marginTop: -5 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 },
+  sectionTitle: { color: theme.text, fontSize: 10, fontWeight: '900', letterSpacing: 1.15 },
+  sectionHint: { color: theme.muted, fontSize: 7, letterSpacing: 0.8, fontWeight: '800' },
+  sports: { flexDirection: 'row', gap: 9 },
+  sport: { flex: 1, minHeight: 91, borderRadius: 17, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, paddingVertical: 11, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  sportSelected: { backgroundColor: '#1B2614', borderColor: theme.lime },
+  sportDisabled: { opacity: 0.55 },
+  sportIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: theme.surface2, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  sportIconSelected: { backgroundColor: theme.lime },
+  sportText: { color: theme.text, fontSize: 10, fontWeight: '900' },
+  sportTextSelected: { color: theme.lime },
+  sportSubtitle: { color: theme.muted, fontSize: 8 },
+  sportSubtitleSelected: { color: '#B6D77A' },
+  mapSection: { backgroundColor: theme.surface, borderRadius: 22, borderWidth: 1, borderColor: theme.border, padding: 9, gap: 9 },
+  mapTopBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 5, paddingTop: 2 },
+  mapTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  mapTitle: { color: theme.text, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  mapLive: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: theme.surface2, borderRadius: 99, paddingHorizontal: 8, paddingVertical: 5 },
+  miniDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: theme.muted },
+  mapLiveText: { color: theme.muted, fontSize: 7, fontWeight: '900', letterSpacing: 0.7 },
+  mapWrap: { height: 345, borderRadius: 16, overflow: 'hidden', backgroundColor: '#111817', position: 'relative' },
+  map: { flex: 1, backgroundColor: '#111817' },
+  mapGpsBadge: { position: 'absolute', left: 10, bottom: 10, maxWidth: '78%', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(8,10,11,0.88)', borderWidth: 1, borderColor: 'rgba(199,255,61,0.18)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
+  mapGpsText: { color: theme.text, fontSize: 8, fontWeight: '700' },
+  recenter: { position: 'absolute', right: 10, bottom: 10, width: 37, height: 37, borderRadius: 12, backgroundColor: 'rgba(8,10,11,0.92)', borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center' },
+  mapEmptyHint: { position: 'absolute', alignSelf: 'center', top: '34%', alignItems: 'center', width: '72%', backgroundColor: 'rgba(8,10,11,0.82)', borderWidth: 1, borderColor: 'rgba(199,255,61,0.16)', borderRadius: 17, paddingVertical: 14, paddingHorizontal: 13 },
+  mapEmptyIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#26351A', alignItems: 'center', justifyContent: 'center', marginBottom: 7 },
+  mapEmptyTitle: { color: theme.text, fontSize: 11, fontWeight: '900' },
+  mapEmptyText: { color: theme.muted, fontSize: 8, lineHeight: 13, textAlign: 'center', marginTop: 4 },
+  distanceCard: { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 21, padding: 17 },
+  distanceCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  distanceLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  metricIcon: { width: 29, height: 29, borderRadius: 10, backgroundColor: '#26351A', alignItems: 'center', justifyContent: 'center' },
+  metricLabel: { color: theme.muted, fontSize: 8, fontWeight: '900', letterSpacing: 1 },
+  activityTypeTag: { backgroundColor: theme.surface2, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 5 },
+  activityTypeText: { color: theme.lime, fontSize: 7, fontWeight: '900', letterSpacing: 0.8 },
+  distanceLine: { flexDirection: 'row', alignItems: 'baseline', marginTop: 5 },
+  distance: { color: theme.text, fontSize: 58, fontWeight: '900', letterSpacing: -3 },
+  distanceUnit: { color: theme.lime, fontSize: 14, fontWeight: '900', marginLeft: 8 },
+  distanceDivider: { height: 1, backgroundColor: theme.border, marginTop: 7, marginBottom: 10 },
+  distanceFoot: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  distanceFootText: { color: theme.muted, fontSize: 8, fontWeight: '700' },
+  metrics: { flexDirection: 'row', gap: 9 },
+  metricCard: { flex: 1, minHeight: 91, backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 9, alignItems: 'center', justifyContent: 'center' },
+  metricCardIcon: { width: 29, height: 29, borderRadius: 10, backgroundColor: '#26351A', alignItems: 'center', justifyContent: 'center', marginBottom: 7 },
+  metricValue: { color: theme.text, fontSize: 15, fontWeight: '900' },
+  metricCaption: { color: theme.muted, fontSize: 7, letterSpacing: 0.8, marginTop: 4, fontWeight: '900' },
+  controlCard: { backgroundColor: theme.surface, borderWidth: 1, borderColor: theme.border, borderRadius: 21, padding: 15, gap: 13 },
+  controlIntro: { gap: 4 },
+  controlTitle: { color: theme.text, fontSize: 16, fontWeight: '900', letterSpacing: -0.3 },
+  controlSubtitle: { color: theme.muted, fontSize: 10, lineHeight: 15 },
+  startButton: { flex: 1, minHeight: 54, backgroundColor: theme.lime, borderRadius: 15, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  startIcon: { width: 28, height: 28, borderRadius: 10, backgroundColor: 'rgba(8,10,11,0.10)', alignItems: 'center', justifyContent: 'center' },
+  startText: { color: theme.bg, fontSize: 10, fontWeight: '900', letterSpacing: 0.8, flex: 1, textAlign: 'center' },
   actionRow: { flexDirection: 'row', gap: 9 },
-  pauseButton: { flex: 1, backgroundColor: '#292F30', borderWidth: 1, borderColor: '#59605E', borderRadius: 16, padding: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
-  stopButton: { flex: 1, backgroundColor: '#292F30', borderWidth: 1, borderColor: '#59605E', borderRadius: 16, padding: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
-  stopText: { color: theme.text, fontSize: 11, fontWeight: '900', letterSpacing: .7 },
-  footnote: { color: '#74807D', fontSize: 8, lineHeight: 14, textAlign: 'center', paddingHorizontal: 5 }
+  pauseButton: { flex: 1, minHeight: 52, backgroundColor: theme.surface2, borderWidth: 1, borderColor: '#465047', borderRadius: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  stopButton: { flex: 1, minHeight: 52, backgroundColor: '#2B1A1B', borderWidth: 1, borderColor: '#66383A', borderRadius: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  secondaryButtonText: { color: theme.text, fontSize: 10, fontWeight: '900', letterSpacing: 0.7 },
+  footnoteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, paddingHorizontal: 3 },
+  footnote: { flex: 1, color: theme.muted, fontSize: 8, lineHeight: 13 }
 });
