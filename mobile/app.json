@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "FITGO",
+    "slug": "fitgo",
+    "scheme": "fitgo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.fitgo.mobile",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "O FITGO usa sua localização durante corridas, caminhadas e pedaladas para registrar seu percurso.",
+          "locationAlwaysAndWhenInUsePermission": "O FITGO usa sua localização durante uma atividade iniciada por você, mesmo com a tela bloqueada, para registrar o percurso.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "fitgo-reminders"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
