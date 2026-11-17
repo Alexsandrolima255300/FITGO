@@ -11,7 +11,9 @@ Aplicativo Android nativo do FITGO, desenvolvido com Expo SDK 58, React Native e
 - Distância, tempo, ritmo e velocidade estimados.
 - Histórico local de atividades.
 - Cartão de evolução em PNG para compartilhar.
-- Registro de água e lembretes locais.
+- Registro de água, meta ajustável e lembretes locais.
+- Diário alimentar com registros por refeição.
+- Histórico local de peso corporal.
 
 ## Executar
 
