@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import MapView, { Polyline, UrlTile, Region } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
+import { MAP_HTML } from '../src/map-html';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +10,6 @@ import { ActiveRoute, calculateDistance, FitgoActivity, formatDuration, formatPa
 import { FITGO_LOCATION_TASK } from '../src/location-task';
 import { theme } from '../src/theme';
 
-const initialRegion: Region = { latitude: -14.235, longitude: -51.925, latitudeDelta: 24, longitudeDelta: 24 };
 const sportOptions: { type: SportType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { type: 'run', label: 'Corrida', icon: 'walk' },
   { type: 'walk', label: 'Caminhada', icon: 'footsteps' },
@@ -17,7 +17,8 @@ const sportOptions: { type: SportType; label: string; icon: keyof typeof Ionicon
 ];
 
 export default function ActivityScreen() {
-  const map = useRef<MapView>(null);
+  const map = useRef<WebView>(null);
+  const [mapReady, setMapReady] = useState(false);
   const watch = useRef<Location.LocationSubscription | null>(null);
   const routeRef = useRef<ActiveRoute | null>(null);
   const [sport, setSport] = useState<SportType>('run');
@@ -44,13 +45,18 @@ export default function ActivityScreen() {
         routeRef.current = route;
         setPoints(route.points);
         const last = route.points[route.points.length - 1];
-        if (last) map.current?.animateToRegion({ latitude: last.latitude, longitude: last.longitude, latitudeDelta: 0.006, longitudeDelta: 0.006 }, 500);
+        if (last && mapReady) map.current?.injectJavaScript('window.updateRoute(' + JSON.stringify(route.points.map((point) => [point.latitude, point.longitude])) + '); true;');
       }
     }, 2500);
     return () => { clearInterval(timer); clearInterval(sync); };
   }, [active, backgroundEnabled]);
 
   useEffect(() => () => { watch.current?.remove(); }, []);
+
+  useEffect(() => {
+    if (!mapReady || !points.length) return;
+    map.current?.injectJavaScript('window.updateRoute(' + JSON.stringify(points.map((point) => [point.latitude, point.longitude])) + '); true;');
+  }, [mapReady, points]);
 
   const startForegroundWatch = async () => {
     watch.current = await Location.watchPositionAsync(
@@ -69,7 +75,7 @@ export default function ActivityScreen() {
         routeRef.current = next;
         setPoints(next.points);
         await setActiveRoute(next);
-        map.current?.animateToRegion({ latitude: point.latitude, longitude: point.longitude, latitudeDelta: 0.006, longitudeDelta: 0.006 }, 350);
+        // O mapa recebe a rota pelo efeito associado ao estado de pontos.
       }
     );
   };
@@ -172,7 +178,7 @@ export default function ActivityScreen() {
 
   const recenter = () => {
     const last = points[points.length - 1];
-    if (last) map.current?.animateToRegion({ latitude: last.latitude, longitude: last.longitude, latitudeDelta: 0.006, longitudeDelta: 0.006 }, 500);
+    if (last) map.current?.injectJavaScript('window.centerOn(' + last.latitude + ',' + last.longitude + '); true;');
   };
 
   return (
@@ -180,10 +186,17 @@ export default function ActivityScreen() {
       <View style={styles.header}><View><Text style={styles.kicker}>REGISTRE SEU MOVIMENTO</Text><Text style={styles.title}>Atividade GPS</Text></View><View style={styles.livePill}><View style={[styles.dot, active && styles.dotLive]} /><Text style={styles.liveText}>{active ? 'AO VIVO' : 'PRONTO'}</Text></View></View>
       <View style={styles.sports}>{sportOptions.map((option) => <Pressable key={option.type} disabled={active} onPress={() => setSport(option.type)} style={[styles.sport, sport === option.type && styles.sportSelected]}><Ionicons name={option.icon} size={18} color={sport === option.type ? theme.bg : theme.muted} /><Text style={[styles.sportText, sport === option.type && styles.sportTextSelected]}>{option.label}</Text></Pressable>)}</View>
       <View style={styles.mapWrap}>
-        <MapView ref={map} style={styles.map} initialRegion={initialRegion} mapType="none" showsUserLocation={active} showsMyLocationButton={false} rotateEnabled={false}>
-          <UrlTile urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} flipY={false} />
-          {points.length > 1 && <Polyline coordinates={points.map((point) => ({ latitude: point.latitude, longitude: point.longitude }))} strokeColor={theme.lime} strokeWidth={5} />}
-        </MapView>
+        <WebView
+          ref={map}
+          style={styles.map}
+          source={{ html: MAP_HTML }}
+          originWhitelist={['*']}
+          javaScriptEnabled
+          domStorageEnabled
+          onMessage={(event) => {
+            if (event.nativeEvent.data === 'ready') setMapReady(true);
+          }}
+        />
         <View style={styles.mapTag}><Ionicons name="navigate" color={theme.lime} size={12} /><Text style={styles.mapTagText}>MAPA DO PERCURSO</Text></View>
         <Pressable style={styles.recenter} onPress={recenter}><Ionicons name="locate" color={theme.text} size={19} /></Pressable>
         <Text style={styles.attribution}>© OpenStreetMap contributors</Text>

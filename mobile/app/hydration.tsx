@@ -6,7 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { theme } from '../src/theme';
 
-const todayKey = () => 'fitgo:water:' + new Date().toISOString().slice(0, 10);
+const todayKey = () => {
+  const date = new Date();
+  const localDate = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+  return 'fitgo:water:' + localDate;
+};
 const GOAL_KEY = 'fitgo:water-goal';
 const REMINDER_KEY = 'fitgo:water-reminder';
 
