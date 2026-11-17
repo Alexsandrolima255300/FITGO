@@ -1,4 +1,4 @@
-export const MAP_HTML = String.raw\`<!doctype html>
+export const MAP_HTML = String.raw`<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
@@ -48,4 +48,4 @@ export const MAP_HTML = String.raw\`<!doctype html>
     window.ReactNativeWebView && window.ReactNativeWebView.postMessage('ready');
   </script>
 </body>
-</html>\`;
+</html>`;
