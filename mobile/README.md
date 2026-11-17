@@ -9,6 +9,7 @@ Aplicativo Android nativo do FITGO, desenvolvido com Expo SDK 58, React Native e
 - Registro de corrida, caminhada e ciclismo com GPS.
 - Captura de rota em segundo plano quando o usuário concede a permissão.
 - Distância, tempo, ritmo e velocidade estimados.
+- Controles para pausar, retomar e finalizar atividades.
 - Histórico local de atividades.
 - Cartão de evolução em PNG com traçado simplificado da rota para compartilhar.
 - Registro de água, meta ajustável e lembretes locais.
