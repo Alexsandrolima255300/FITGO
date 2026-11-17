@@ -4,6 +4,7 @@ import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View 
 import { useFocusEffect } from 'expo-router';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import Svg, { Circle, Polyline as SvgPolyline } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { FitgoActivity, formatDuration, formatPace, getActivities, sportLabel } from '../src/storage';
 import { theme } from '../src/theme';
@@ -30,6 +31,22 @@ export default function ProgressScreen() {
     setWeight('');
     await AsyncStorage.setItem('fitgo:body-weight:v1', JSON.stringify(next));
   };
+  const routeSource = selected?.points ?? [];
+  const routeSampleStep = Math.max(1, Math.floor(routeSource.length / 120));
+  const routeSample = routeSource.filter((_, index) => index % routeSampleStep === 0 || index === routeSource.length - 1);
+  const latitudes = routeSample.map((point) => point.latitude);
+  const longitudes = routeSample.map((point) => point.longitude);
+  const minLat = latitudes.length ? Math.min(...latitudes) : 0;
+  const maxLat = latitudes.length ? Math.max(...latitudes) : 1;
+  const minLng = longitudes.length ? Math.min(...longitudes) : 0;
+  const maxLng = longitudes.length ? Math.max(...longitudes) : 1;
+  const routeXY = routeSample.map((point) => [
+    12 + ((point.longitude - minLng) / Math.max(maxLng - minLng, 0.000001)) * 276,
+    8 + ((maxLat - point.latitude) / Math.max(maxLat - minLat, 0.000001)) * 70
+  ]);
+  const routePath = routeXY.map((point) => point[0].toFixed(1) + ',' + point[1].toFixed(1)).join(' ');
+  const firstRoutePoint = routeXY[0] ?? [12, 43];
+  const lastRoutePoint = routeXY[routeXY.length - 1] ?? [288, 43];
   const totalDistance = activities.reduce((sum, item) => sum + item.distanceMeters, 0);
   const totalTime = activities.reduce((sum, item) => sum + item.durationSeconds, 0);
   const share = async () => {
@@ -68,6 +85,13 @@ export default function ProgressScreen() {
               <View style={styles.exportTop}><Text style={styles.exportLogo}>FIT<Text style={{ color: theme.lime }}>GO</Text></Text><Text style={styles.exportTag}>MINHA EVOLUÇÃO</Text></View>
               <Text style={styles.exportSport}>{sportLabel(selected.type).toUpperCase()}</Text>
               <Text style={styles.exportDistance}>{(selected.distanceMeters / 1000).toFixed(2)}<Text style={styles.exportKm}> KM</Text></Text>
+              <View style={styles.routeGraphic}>
+                <Svg width="100%" height={86} viewBox="0 0 300 86">
+                  {routePath.length > 0 && <SvgPolyline points={routePath} fill="none" stroke={theme.lime} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />}
+                  {routeXY.length > 0 && <Circle cx={firstRoutePoint[0]} cy={firstRoutePoint[1]} r={5} fill="#FFFFFF" />}
+                  {routeXY.length > 0 && <Circle cx={lastRoutePoint[0]} cy={lastRoutePoint[1]} r={5} fill={theme.lime} stroke="#101516" strokeWidth={2} />}
+                </Svg>
+              </View>
               <View style={styles.exportDivider} />
               <View style={styles.exportStats}><View><Text style={styles.exportValue}>{formatDuration(selected.durationSeconds)}</Text><Text style={styles.exportLabel}>TEMPO</Text></View><View><Text style={styles.exportValue}>{formatPace(selected.paceSecondsPerKm)}</Text><Text style={styles.exportLabel}>RITMO / KM</Text></View><View><Text style={styles.exportValue}>{selected.averageSpeedKmh.toFixed(1)}</Text><Text style={styles.exportLabel}>KM/H</Text></View></View>
               <Text style={styles.exportDate}>{new Date(selected.startedAt).toLocaleDateString('pt-BR')}  ·  UM PASSO DE CADA VEZ.</Text>
@@ -122,6 +146,7 @@ const styles = StyleSheet.create({
   exportSport: { color: theme.muted, fontSize: 9, letterSpacing: 2, fontWeight: '900', marginTop: 31 },
   exportDistance: { color: theme.text, fontSize: 58, fontWeight: '900', letterSpacing: -3, marginTop: 3 },
   exportKm: { color: theme.lime, fontSize: 17 },
+  routeGraphic: { marginTop: 8, marginBottom: 4, paddingHorizontal: 2, borderRadius: 12, backgroundColor: '#151D1A' },
   exportDivider: { height: 1, backgroundColor: '#354039', marginVertical: 20 },
   exportStats: { flexDirection: 'row', justifyContent: 'space-between' },
   exportValue: { color: theme.text, fontSize: 16, fontWeight: '900' },

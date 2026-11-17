@@ -10,7 +10,7 @@ Aplicativo Android nativo do FITGO, desenvolvido com Expo SDK 58, React Native e
 - Captura de rota em segundo plano quando o usuário concede a permissão.
 - Distância, tempo, ritmo e velocidade estimados.
 - Histórico local de atividades.
-- Cartão de evolução em PNG para compartilhar.
+- Cartão de evolução em PNG com traçado simplificado da rota para compartilhar.
 - Registro de água, meta ajustável e lembretes locais.
 - Diário alimentar com registros por refeição.
 - Histórico local de peso corporal.
@@ -57,4 +57,4 @@ O perfil `preview` foi configurado para gerar APK instalável. O perfil `product
 
 ## Mapas
 
-A tela de atividade usa tiles do OpenStreetMap com atribuição visível. Antes de escalar para produção, revisar a política de uso dos tiles e selecionar um provedor de mapas adequado ao volume e às condições comerciais do aplicativo.
+A tela de atividade usa Leaflet em uma WebView nativa, com tiles do OpenStreetMap e atribuição visível. Isso evita exigir uma chave de Google Maps para o protótipo. Antes de escalar para produção, revisar a política de uso dos tiles e selecionar um provedor de mapas adequado ao volume e às condições comerciais do aplicativo.
