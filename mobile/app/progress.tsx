@@ -14,7 +14,7 @@ export default function ProgressScreen() {
   const [selected, setSelected] = useState<FitgoActivity | null>(null);
   const [weight, setWeight] = useState('');
   const [weights, setWeights] = useState<{ id: string; date: string; kg: number }[]>([]);
-  const shareRef = useRef<ViewShot>(null);
+  const shareRef = useRef<any>(null);
   useFocusEffect(useCallback(() => {
     getActivities().then((items) => { setActivities(items); setSelected(items[0] ?? null); });
     AsyncStorage.getItem('fitgo:body-weight:v1').then((value) => setWeights(value ? JSON.parse(value) : []));
