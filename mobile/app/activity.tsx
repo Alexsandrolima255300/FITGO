@@ -21,8 +21,11 @@ export default function ActivityScreen() {
   const [mapReady, setMapReady] = useState(false);
   const watch = useRef<Location.LocationSubscription | null>(null);
   const routeRef = useRef<ActiveRoute | null>(null);
+  const sessionStartedAtRef = useRef<number | null>(null);
+  const elapsedBeforeRef = useRef(0);
   const [sport, setSport] = useState<SportType>('run');
   const [active, setActive] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [points, setPoints] = useState<TrackPoint[]>([]);
   const [seconds, setSeconds] = useState(0);
   const [gps, setGps] = useState('GPS desligado');
@@ -35,8 +38,8 @@ export default function ActivityScreen() {
   useEffect(() => {
     if (!active) return;
     const timer = setInterval(() => {
-      const start = routeRef.current?.startedAt;
-      if (start) setSeconds(Math.floor((Date.now() - new Date(start).getTime()) / 1000));
+      const elapsed = elapsedBeforeRef.current + (sessionStartedAtRef.current ? Date.now() - sessionStartedAtRef.current : 0);
+      setSeconds(Math.floor(elapsed / 1000));
     }, 1000);
     const sync = setInterval(async () => {
       if (!backgroundEnabled) return;
@@ -110,6 +113,9 @@ export default function ActivityScreen() {
       await setActiveRoute(route);
       setPoints([]);
       setSeconds(0);
+      elapsedBeforeRef.current = 0;
+      sessionStartedAtRef.current = Date.now();
+      setPaused(false);
       setBackgroundEnabled(allowBackground);
       if (allowBackground) {
         try {
@@ -139,6 +145,50 @@ export default function ActivityScreen() {
     }
   };
 
+  const pause = async () => {
+    if (!active) return;
+    const elapsed = elapsedBeforeRef.current + (sessionStartedAtRef.current ? Date.now() - sessionStartedAtRef.current : 0);
+    elapsedBeforeRef.current = elapsed;
+    sessionStartedAtRef.current = null;
+    setSeconds(Math.floor(elapsed / 1000));
+    watch.current?.remove();
+    watch.current = null;
+    if (await TaskManager.isTaskRegisteredAsync(FITGO_LOCATION_TASK)) {
+      await Location.stopLocationUpdatesAsync(FITGO_LOCATION_TASK);
+    }
+    setActive(false);
+    setPaused(true);
+    setGps('Atividade pausada');
+  };
+
+  const resume = async () => {
+    try {
+      if (backgroundEnabled) {
+        if (await TaskManager.isTaskRegisteredAsync(FITGO_LOCATION_TASK)) {
+          await Location.stopLocationUpdatesAsync(FITGO_LOCATION_TASK);
+        }
+        await Location.startLocationUpdatesAsync(FITGO_LOCATION_TASK, {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 1000,
+          distanceInterval: 3,
+          foregroundService: {
+            notificationTitle: 'FITGO está registrando sua atividade',
+            notificationBody: 'Seu percurso continua sendo salvo. Toque para voltar ao FITGO.',
+            killServiceOnDestroy: false
+          }
+        });
+      } else {
+        await startForegroundWatch();
+      }
+      sessionStartedAtRef.current = Date.now();
+      setPaused(false);
+      setActive(true);
+      setGps(backgroundEnabled ? 'GPS ativo · segundo plano habilitado' : 'GPS ativo · mantenha o FITGO aberto');
+    } catch {
+      Alert.alert('Não foi possível retomar', 'Verifique a localização e tente novamente.');
+    }
+  };
+
   const finish = async () => {
     try {
       watch.current?.remove();
@@ -151,7 +201,8 @@ export default function ActivityScreen() {
       const endedAt = new Date().toISOString();
       const finalPoints = route.points;
       const meters = calculateDistance(finalPoints);
-      const duration = Math.max(1, Math.floor((new Date(endedAt).getTime() - new Date(route.startedAt).getTime()) / 1000));
+      const elapsed = elapsedBeforeRef.current + (sessionStartedAtRef.current ? Date.now() - sessionStartedAtRef.current : 0);
+      const duration = Math.max(1, Math.floor(elapsed / 1000));
       const km = meters / 1000;
       const activity: FitgoActivity = {
         id: String(Date.now()),
@@ -167,7 +218,10 @@ export default function ActivityScreen() {
       await saveActivity(activity);
       await setActiveRoute(null);
       routeRef.current = null;
+      sessionStartedAtRef.current = null;
+      elapsedBeforeRef.current = 0;
       setActive(false);
+      setPaused(false);
       setPoints(finalPoints);
       setGps('Atividade salva com sucesso');
       Alert.alert('Atividade concluída!', 'Seu registro foi salvo no histórico. Compartilhe sua conquista na aba Evolução.', [{ text: 'Ver evolução', onPress: () => router.push('/progress') }, { text: 'Continuar aqui', style: 'cancel' }]);
@@ -203,7 +257,7 @@ export default function ActivityScreen() {
       </View>
       <View style={styles.mainMetric}><Text style={styles.metricLabel}>DISTÂNCIA PERCORRIDA</Text><Text style={styles.distance}>{(distance / 1000).toFixed(2)}<Text style={styles.distanceUnit}> km</Text></Text><View style={styles.metrics}><View style={styles.metric}><Text style={styles.metricValue}>{formatDuration(seconds)}</Text><Text style={styles.metricCaption}>TEMPO</Text></View><View style={styles.metric}><Text style={styles.metricValue}>{formatPace(pace)}</Text><Text style={styles.metricCaption}>RITMO / KM</Text></View><View style={styles.metric}><Text style={styles.metricValue}>{speed.toFixed(1)}</Text><Text style={styles.metricCaption}>KM/H</Text></View></View></View>
       <Text style={styles.status}>{gps}</Text>
-      {!active ? <Pressable style={styles.startButton} onPress={start}><Ionicons name="play" color={theme.bg} size={17} /><Text style={styles.startText}>INICIAR {sport === 'run' ? 'CORRIDA' : sport === 'walk' ? 'CAMINHADA' : 'PEDAL'}</Text></Pressable> : <Pressable style={styles.stopButton} onPress={finish}><Ionicons name="stop" color={theme.text} size={17} /><Text style={styles.stopText}>FINALIZAR E SALVAR</Text></Pressable>}
+      {!active && !paused ? <Pressable style={styles.startButton} onPress={start}><Ionicons name="play" color={theme.bg} size={17} /><Text style={styles.startText}>INICIAR {sport === 'run' ? 'CORRIDA' : sport === 'walk' ? 'CAMINHADA' : 'PEDAL'}</Text></Pressable> : active ? <View style={styles.actionRow}><Pressable style={styles.pauseButton} onPress={pause}><Ionicons name="pause" color={theme.text} size={17} /><Text style={styles.stopText}>PAUSAR</Text></Pressable><Pressable style={styles.stopButton} onPress={finish}><Ionicons name="stop" color={theme.text} size={17} /><Text style={styles.stopText}>FINALIZAR</Text></Pressable></View> : <View style={styles.actionRow}><Pressable style={styles.startButton} onPress={resume}><Ionicons name="play" color={theme.bg} size={17} /><Text style={styles.startText}>CONTINUAR</Text></Pressable><Pressable style={styles.stopButton} onPress={finish}><Ionicons name="stop" color={theme.text} size={17} /><Text style={styles.stopText}>FINALIZAR</Text></Pressable></View>}
       <Text style={styles.footnote}>Mantenha o GPS ativado. O registro em segundo plano depende das permissões do Android e das configurações de bateria do aparelho. O mapa usa dados do OpenStreetMap.</Text>
     </ScrollView>
   );
@@ -241,7 +295,9 @@ const styles = StyleSheet.create({
   status: { color: theme.muted, fontSize: 9, textAlign: 'center' },
   startButton: { backgroundColor: theme.lime, borderRadius: 16, padding: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   startText: { color: theme.bg, fontSize: 11, fontWeight: '900', letterSpacing: .7 },
-  stopButton: { backgroundColor: '#292F30', borderWidth: 1, borderColor: '#59605E', borderRadius: 16, padding: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  actionRow: { flexDirection: 'row', gap: 9 },
+  pauseButton: { flex: 1, backgroundColor: '#292F30', borderWidth: 1, borderColor: '#59605E', borderRadius: 16, padding: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  stopButton: { flex: 1, backgroundColor: '#292F30', borderWidth: 1, borderColor: '#59605E', borderRadius: 16, padding: 17, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   stopText: { color: theme.text, fontSize: 11, fontWeight: '900', letterSpacing: .7 },
   footnote: { color: '#74807D', fontSize: 8, lineHeight: 14, textAlign: 'center', paddingHorizontal: 5 }
 });
