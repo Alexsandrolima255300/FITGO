@@ -10,6 +10,8 @@ import { ActiveRoute, calculateDistance, FitgoActivity, formatDuration, formatPa
 import { FITGO_LOCATION_TASK } from '../src/location-task';
 import { theme } from '../src/theme';
 
+const NativeWebView: any = WebView;
+
 const sportOptions: { type: SportType; label: string; subtitle: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { type: 'run', label: 'Corrida', subtitle: 'Correr', icon: 'walk' },
   { type: 'walk', label: 'Caminhada', subtitle: 'Caminhar', icon: 'footsteps' },
@@ -17,7 +19,7 @@ const sportOptions: { type: SportType; label: string; subtitle: string; icon: ke
 ];
 
 export default function ActivityScreen() {
-  const map = useRef<WebView>(null);
+  const map = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
   const watch = useRef<Location.LocationSubscription | null>(null);
   const routeRef = useRef<ActiveRoute | null>(null);
@@ -285,14 +287,14 @@ export default function ActivityScreen() {
           </View>
         </View>
         <View style={styles.mapWrap}>
-          <WebView
+          <NativeWebView
             ref={map}
             style={styles.map}
             source={{ html: MAP_HTML }}
             originWhitelist={['*']}
             javaScriptEnabled
             domStorageEnabled
-            onMessage={(event) => {
+            onMessage={(event: { nativeEvent: { data: string } }) => {
               if (event.nativeEvent.data === 'ready') setMapReady(true);
             }}
           />
