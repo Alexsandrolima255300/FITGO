@@ -58,4 +58,4 @@ O perfil `preview` foi configurado para gerar APK instalável. O perfil `product
 
 ## Mapas
 
-A tela de atividade usa Leaflet em uma WebView nativa, com tiles do OpenStreetMap e atribuição visível. Isso evita exigir uma chave de Google Maps para o protótipo. Antes de escalar para produção, revisar a política de uso dos tiles e selecionar um provedor de mapas adequado ao volume e às condições comerciais do aplicativo.
+A tela de atividade usa Leaflet em uma WebView nativa, com tiles escuros do CARTO e dados cartográficos do OpenStreetMap, mantendo a atribuição visível no mapa. Isso evita exigir uma chave de Google Maps para o protótipo. Antes de escalar para produção, revisar as políticas e condições de uso dos tiles e selecionar um provedor de mapas adequado ao volume e às condições comerciais do aplicativo.
